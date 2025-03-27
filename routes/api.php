@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\API\RegisterController;
 use App\Http\Controllers\API\UserController;
+use App\Http\Controllers\API\RecipeController;
 use Illuminate\Support\Facades\Route;
 
 
@@ -18,6 +19,7 @@ Route::controller(RegisterController::class)->group(function(){
 
 //I think this looks good below here
 Route::middleware('auth:sanctum')->group( function () {
+    Route::resource('recipes', RecipeController::class);
     Route::controller(UserController::class)->group(function(){
         Route::get('user', 'getUser');
         Route::post('user/upload_avatar', 'uploadAvatar');
