@@ -2,12 +2,10 @@
 
 namespace Database\Seeders;
 
-use App\Models\Recipes;
+use App\Models\Recipe;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\DB;
 
-
-class RecipesSeeder extends Seeder
+class RecipeSeeder extends Seeder
 {
     /**
      * Run the database seeds.
@@ -17,41 +15,46 @@ class RecipesSeeder extends Seeder
         $recipes = ([
             [
                 'recipe_name' => 'Stroganoff',
-                'total_time' => 45, // Example time in minutes
+                'author_id' => 1, // Reference to an author
+                'total_time' => 45, //time in minutes
                 'file' => 'images/recipe-1.jpg',
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
             [
                 'recipe_name' => 'Hamburger',
-                'total_time' => 30, // Example time in minutes
+                'author_id' => 2,
+                'total_time' => 30,
                 'file' => 'images/recipe-2.jpg',
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
             [
                 'recipe_name' => 'Homemade pizza',
-                'total_time' => 50, // Example time in minutes
+                'author_id' => 1, //nice. repeat
+                'total_time' => 50,
                 'file' => 'images/recipe-3.jpg',
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
             [
                 'recipe_name' => 'Spaghetti',
-                'total_time' => 40, // Example time in minutes
+                'author_id' => 3,
+                'total_time' => 40,
                 'file' => 'images/recipe-4.jpeg',
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
             [
                 'recipe_name' => 'Salad',
-                'total_time' => 20, // Example time in minutes
+                'author_id' => 2,
+                'total_time' => 20,
                 'file' => 'images/recipe-5.jpg',
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
         ]);
 
-        Recipes::insert($recipes);
+        Recipe::insert($recipes);
     }
 }
