@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\API;
 use Illuminate\Http\Request;
 use App\Models\Recipe; //I previously had plural
+use \App\Models\Author;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage; //chat had me import this. What does it do?
+use Illuminate\Support\Facades\Validator;
 
 class RecipeController extends BaseController
 {
@@ -18,15 +20,21 @@ class RecipeController extends BaseController
     {
       
         // This eager loads the author relationship to avoid N+1 query problem
-        $recipes = Recipe::with('author')->get();
+        $recipes = Recipe::with('author', 'ingredients')->get();
 
         // $recipes = Recipe::get(); //this gets all. if wanted to order by would be book:orderby('name_of_col', 'desc') -> get()this is where we call the model. could also do all for all relationships
     
         foreach($recipes as $recipe){ //this is turning this file object into the full path
             $recipe->file = $this->getS3Url($recipe->file);
         }
+
+        // Fetch all authors
+        $authors = Author::all();
        
-        return $this->sendResponse($recipes, 'Recipes retrieved successfully');
+        return $this->sendResponse([
+            'recipes' => $recipes,
+            'authors' => $authors
+        ], 'Recipes and authors retrieved successfully');
     }
 
 
@@ -68,9 +76,12 @@ class RecipeController extends BaseController
         }
 
         $recipe = Recipe::create($validated);
-        $recipe->file = $this->getS3Url($recipe->file);
 
-        return $this->sendResponse($recipe, 'Recipe created successfully');
+        $recipeFinal = Recipe::where('id',$recipe->id)->with('author', 'ingredients')->first(); 
+        $recipeFinal->file = $this->getS3Url($recipeFinal->file);
+
+        return $this->sendResponse($recipeFinal, 'Recipe created successfully');
+
     }
 
     /**
@@ -103,38 +114,15 @@ class RecipeController extends BaseController
             'recipe_name' => 'sometimes|required|string|max:255',
             'author_id' => 'sometimes|required|exists:authors,id',
             'total_time' => 'sometimes|required|integer',
-            'file' => 'sometimes|image|mimes:jpeg,png,jpg,gif,svg',
-        ]);
-
-        // HIGHLIGHT: Added file handling with custom naming strategy
-        if ($request->hasFile('file')) {
-            // Delete old file
-            if ($recipe->file) {
-                Storage::disk('s3')->delete($recipe->file);
-            }
-            
-            $authUser = Auth::user();
-            $extension = $request->file('file')->getClientOriginalExtension();
-            $image_name = time() .'_recipe_' . $authUser->id . '.' . $extension;
-            $path = $request->file('file')->storeAs(
-                'images',
-                $image_name,
-                's3'
-            );
-            
-            Storage::disk('s3')->setVisibility($path, "public");
-            
-            if(!$path) {
-                return $this->sendError($path, 'Recipe image failed to upload!');
-            }
-            
-            $validated['file'] = $path;
-        }
+            //remember image in different place
+        ]);       
 
         $recipe->update($validated);
-        $recipe->file = $this->getS3Url($recipe->file);
 
-        return $this->sendResponse($recipe, 'Recipe updated successfully');
+        $recipeFinal = Recipe::where('id',$recipe->id)->with('author', 'ingredients')->first(); 
+        $recipeFinal->file = $this->getS3Url($recipeFinal->file);
+
+        return $this->sendResponse($recipeFinal, 'Recipe updated successfully');
     }
 
     /**
@@ -155,6 +143,44 @@ class RecipeController extends BaseController
         $recipe->delete();
     
         return $this->sendResponse(null, 'Recipe deleted successfully');
+    }
+
+    public function updateRecipePicture(Request $request, $id) {
+        $validator = Validator::make($request->all(), [
+            'file' => 'required|image|mimes:jpeg,png,jpg,gif,svg'
+        ]);
+
+        if($validator->fails()){
+            return $this->sendError('Validation Error.', $validator->errors());       
+        }
+
+        $recipe = Recipe::findOrFail($id);
+
+        if ($request->hasFile('file')) {
+        
+            $extension  = request()->file('file')->getClientOriginalExtension(); //This is to get the extension of the image file just uploaded
+            $image_name = time() .'_recipe_picture.' . $extension;
+            $path = $request->file('file')->storeAs(
+                'images',
+                $image_name,
+                's3'
+            );
+            Storage::disk('s3')->setVisibility($path, "public");
+            if(!$path) {
+                return $this->sendError($path, 'recipe image failed to upload!');
+            }
+            
+            $recipe->file = $path;
+
+        } 
+        $recipe->save();
+
+
+        if(isset($recipe->file)){
+            $recipe->file = $this->getS3Url($recipe->file);
+        }
+        $success['recipe'] = $recipe;
+        return $this->sendResponse($success, 'Recipe image successfully updated!');
     }
 
 }

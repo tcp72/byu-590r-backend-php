@@ -27,4 +27,10 @@ Route::middleware('auth:sanctum')->group( function () {
         // Route::post('user/send_verification_email','sendVerificationEmail');
         // Route::post('user/change_email', 'changeEmail');
     });
+
+    Route::controller(recipeController::class)->group(function(){
+
+        Route::post('recipes/{id}/update_recipe_picture','updateRecipePicture');
+    });
 });
+
